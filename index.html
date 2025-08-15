@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FlockByNadeem — Smart Restaurant</title>
+  <meta name="description" content="FlockByNadeem — sample restaurant website with user accounts, reservations, and contact form."/>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React + ReactDOM + Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, Noto Sans, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
+    .glass { backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 transition-colors duration-300">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // --- Helpers ---
+    const uid = () => Math.random().toString(36).slice(2);
+    const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0; } return String(h); };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    const load = (k, d=null) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
+
+    // --- Toast ---
+    const Toast = ({message, onClose}) => {
+      React.useEffect(() => { const t = setTimeout(onClose, 2600); return () => clearTimeout(t); }, []);
+      return (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="rounded-2xl shadow-xl bg-white px-4 py-3 border border-gray-200">
+            <p className="text-sm">{message}</p>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Components ---
+    const Nav = ({page, setPage, authed, onLogout, dark, setDark}) => {
+      const Item = ({id, label}) => (
+        <button
+          onClick={() => setPage(id)}
+          className={"px-3 py-2 rounded-xl text-sm font-semibold transition " + (page===id ? "bg-gray-900 text-white" : "hover:bg-gray-100")}
+        >{label}</button>
+      );
+
+      return (
+        <div className={"sticky top-0 z-40 border-b bg-white/70 glass backdrop-saturate-150 " + (dark ? "bg-gray-900/70 border-gray-800" : "border-gray-200")}>
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-3">
+                <span className={"w-9 h-9 rounded-2xl grid place-content-center font-extrabold " + (dark ? "bg-white text-gray-900" : "bg-gray-900 text-white")}>F</span>
+                <span className={"text-lg font-extrabold " + (dark ? "text-white" : "text-gray-900")}>FlockByNadeem</span>
+                <span className={"mx-3 text-xs px-2 py-1 rounded-full " + (dark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-700")}>Restaurant</span>
+              </div>
+              <div className="hidden md:flex items-center gap-2">
+                <Item id="home" label="Home" />
+                <Item id="menu" label="Menu" />
+                <Item id="reserve" label="Reservations" />
+                <Item id="contact" label="Contact" />
+                {!authed && <Item id="account" label="Account" />}
+                {authed && (
+                  <button onClick={onLogout} className="px-3 py-2 rounded-xl text-sm font-semibold hover:bg-red-50 text-red-600 border border-red-200">Logout</button>
+                )}
+                <button
+                  className={"ml-2 px-3 py-2 rounded-xl text-sm border " + (dark ? "border-gray-700 text-gray-200" : "border-gray-200")}
+                  onClick={() => setDark(!dark)}
+                  aria-label="Toggle theme"
+                >{dark ? "Light" : "Dark"} Mode</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const Hero = ({setPage, dark}) => (
+      <div className={"relative overflow-hidden " + (dark ? "bg-gray-900 text-gray-100" : "bg-white")}>
+        <svg className="absolute -top-10 right-0 w-[40rem] h-[40rem] opacity-10" viewBox="0 0 200 200">
+          <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor={dark ? "#4ade80" : "#1e293b"} />
+            <stop offset="100%" stopColor={dark ? "#22d3ee" : "#0ea5e9"} />
+          </linearGradient></defs>
+          <circle cx="100" cy="100" r="100" fill="url(#g)" />
+        </svg>
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Dine smarter with <span className="underline decoration-8 decoration-emerald-400">FlockByNadeem</span></h1>
+              <p className="mt-4 text-lg opacity-90">Book a table, create an account, and get personalized dish recommendations — all in one elegant, responsive site.</p>
+              <div className="mt-6 flex gap-3">
+                <button onClick={()=>setPage('reserve')} className="px-5 py-3 rounded-2xl text-white bg-gray-900 hover:opacity-90">Reserve a table</button>
+                <button onClick={()=>setPage('account')} className="px-5 py-3 rounded-2xl border border-gray-300 hover:bg-gray-50">Create account</button>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1200&auto=format&fit=crop" alt="Restaurant interior" className="w-full h-72 object-cover"/>
+              </div>
+              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 w-56">
+                <p className="text-sm font-semibold">Tonight's top pick</p>
+                <p className="text-xs text-gray-600">Truffle Mushroom Risotto • 970 PKR</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    const Menu = ({dark, onAdd}) => {
+      const items = [
+        {id:"m1", name:"Truffle Mushroom Risotto", price:970, tags:["veg","chef"]},
+        {id:"m2", name:"Smoky Chicken Alfredo", price:1120, tags:["best"]},
+        {id:"m3", name:"Saffron Lamb Biryani", price:1480, tags:["signature"]},
+        {id:"m4", name:"Zesty Shrimp Tacos", price:990, tags:["spicy"]},
+        {id:"m5", name:"Classic Caesar Salad", price:640, tags:["veg","light"]},
+      ];
+      return (
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <h2 className="text-3xl font-extrabold mb-6">Menu</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map(it=>(
+              <div key={it.id} className={(dark?"bg-gray-900 border-gray-800 text-gray-50":"bg-white")+" rounded-3xl border shadow-sm p-5 flex flex-col"}>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-bold">{it.name}</p>
+                    <span className="text-sm opacity-70">{it.price} PKR</span>
+                  </div>
+                  <div className="mt-2 flex gap-2 flex-wrap">{it.tags.map(t=><span key={t} className="text-xs px-2 py-1 rounded-full bg-gray-100">{t}</span>)}</div>
+                </div>
+                <button onClick={()=>onAdd(it)} className={"mt-4 rounded-xl px-4 py-2 text-sm font-semibold " + (dark?"bg-white text-gray-900":"bg-gray-900 text-white")}>Add to reservation</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const Account = ({onLogin}) => {
+      const [tab, setTab] = React.useState("login");
+      const [form, setForm] = React.useState({name:"", email:"", password:""});
+      const [msg, setMsg] = React.useState("");
+
+      const submit = (e) => {
+        e.preventDefault();
+        if (tab==="signup") {
+          if (!form.name || !form.email || !form.password) return setMsg("Please fill all fields.");
+          const users = load("fb_users", {});
+          if (users[form.email]) return setMsg("Account already exists. Try login.");
+          users[form.email] = { id: uid(), name: form.name, email: form.email, pass: hash(form.password) };
+          save("fb_users", users);
+          save("fb_session", { email: form.email, ts: Date.now() });
+          onLogin(users[form.email]);
+        } else {
+          const users = load("fb_users", {});
+          const u = users[form.email];
+          if (!u || u.pass !== hash(form.password)) return setMsg("Invalid credentials.");
+          save("fb_session", { email: form.email, ts: Date.now() });
+          onLogin(u);
+        }
+      };
+
+      return (
+        <div className="max-w-md mx-auto px-4 py-12">
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
+            <div className="flex gap-2 mb-6">
+              <button onClick={()=>{setTab("login"); setMsg("");}} className={"px-4 py-2 rounded-xl text-sm font-semibold " + (tab==="login"?"bg-gray-900 text-white":"bg-gray-100")}>Login</button>
+              <button onClick={()=>{setTab("signup"); setMsg("");}} className={"px-4 py-2 rounded-xl text-sm font-semibold " + (tab==="signup"?"bg-gray-900 text-white":"bg-gray-100")}>Sign Up</button>
+            </div>
+            <form onSubmit={submit} className="space-y-4">
+              {tab==="signup" && (
+                <input className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="Full name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} />
+              )}
+              <input className="w-full px-4 py-3 rounded-xl border border-gray-300" type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required />
+              <input className="w-full px-4 py-3 rounded-xl border border-gray-300" type="password" placeholder="Password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required />
+              {msg && <p className="text-sm text-red-600">{msg}</p>}
+              <button className="w-full px-4 py-3 rounded-xl bg-gray-900 text-white">Continue</button>
+              <p className="text-xs text-gray-500"></p>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    const Reservations = ({user, basket, setBasket}) => {
+      const [form, setForm] = React.useState({date:"", time:"19:00", people:2, notes:""});
+      const [reservations, setReservations] = React.useState(load("fb_reservations", []));
+      const [toast, setToast] = React.useState("");
+
+      const makeReservation = (e) => {
+        e.preventDefault();
+        if (!user) { setToast("Please log in first (Account tab)."); return; }
+        if (!form.date) { setToast("Pick a date."); return; }
+        const r = { id: uid(), ...form, basket, user: {email:user.email, name:user.name}, createdAt: new Date().toISOString() };
+        const next = [r, ...reservations];
+        setReservations(next);
+        save("fb_reservations", next);
+        setBasket([]);
+        setToast("Reservation confirmed!");
+      };
+
+      const cancelRes = (id) => {
+        const next = reservations.filter(r=>r.id!==id);
+        setReservations(next);
+        save("fb_reservations", next);
+        setToast("Reservation canceled.");
+      };
+
+      return (
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-2 gap-10 items-start">
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
+              <h3 className="text-xl font-bold mb-4">Book a Table</h3>
+              <form onSubmit={makeReservation} className="grid gap-4">
+                <input type="date" className="px-4 py-3 rounded-xl border border-gray-300" value={form.date} onChange={e=>setForm({...form, date:e.target.value})}/>
+                <input type="time" className="px-4 py-3 rounded-xl border border-gray-300" value={form.time} onChange={e=>setForm({...form, time:e.target.value})}/>
+                <input type="number" min="1" max="20" className="px-4 py-3 rounded-xl border border-gray-300" value={form.people} onChange={e=>setForm({...form, people:parseInt(e.target.value||"0")})} placeholder="People"/>
+                <textarea rows="3" className="px-4 py-3 rounded-xl border border-gray-300" placeholder="Notes (optional)" value={form.notes} onChange={e=>setForm({...form, notes:e.target.value})}></textarea>
+                <div className="rounded-2xl border border-gray-200 p-4">
+                  <p className="font-semibold mb-2">Selected dishes</p>
+                  {basket.length===0 ? <p className="text-sm text-gray-500">No dishes added yet (go to Menu tab).</p> :
+                    <ul className="text-sm space-y-1">{basket.map(it=><li key={it.id} className="flex justify-between"><span>{it.name}</span><span>{it.price} PKR</span></li>)}</ul>
+                  }
+                </div>
+                <button className="px-5 py-3 rounded-2xl bg-gray-900 text-white">Confirm reservation</button>
+                <p className="text-xs text-gray-500"></p>
+              </form>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold mb-4">Your Reservations</h3>
+              <div className="space-y-4">
+                {reservations.filter(r=>!user || r.user.email===user.email).map(r => (
+                  <div key={r.id} className="bg-white rounded-2xl border border-gray-200 p-4">
+                    <div className="flex justify-between">
+                      <p className="font-semibold">{r.user.name}</p>
+                      <button onClick={()=>cancelRes(r.id)} className="text-sm text-red-600 hover:underline">Cancel</button>
+                    </div>
+                    <p className="text-sm text-gray-600">{r.date} at {r.time} • {r.people} people</p>
+                    {r.basket?.length>0 && <ul className="mt-2 text-sm text-gray-700 list-disc ml-5">
+                      {r.basket.map(it=><li key={it.id}>{it.name} — {it.price} PKR</li>)}
+                    </ul>}
+                    {r.notes && <p className="text-sm mt-2">Notes: {r.notes}</p>}
+                  </div>
+                ))}
+                {reservations.filter(r=>!user || r.user.email===user.email).length===0 && <p className="text-sm text-gray-500">No reservations yet.</p>}
+              </div>
+            </div>
+          </div>
+          {toast && <Toast message={toast} onClose={()=>setToast("")}/>}
+        </div>
+      );
+    };
+
+    const Contact = () => {
+      const [form, setForm] = React.useState({name:"", email:"", message:""});
+      const [toast, setToast] = React.useState("");
+      const submit = (e) => {
+        e.preventDefault();
+        if (!form.name || !form.email || !form.message) { setToast("Please fill all fields."); return; }
+        const inbox = load("fb_inbox", []);
+        inbox.unshift({id: uid(), ...form, createdAt: new Date().toISOString()});
+        save("fb_inbox", inbox);
+        setForm({name:"", email:"", message:""});
+        setToast("Thanks! We'll get back to you.");
+      };
+      return (
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
+            <h3 className="text-xl font-bold mb-4">Contact Us</h3>
+            <form onSubmit={submit} className="grid gap-4">
+              <input className="px-4 py-3 rounded-xl border border-gray-300" placeholder="Your name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/>
+              <input className="px-4 py-3 rounded-xl border border-gray-300" type="email" placeholder="Your email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})}/>
+              <textarea className="px-4 py-3 rounded-xl border border-gray-300" rows="5" placeholder="Your message" value={form.message} onChange={e=>setForm({...form, message:e.target.value})}></textarea>
+              <button className="px-5 py-3 rounded-2xl bg-gray-900 text-white">Send message</button>
+              <p className="text-xs text-gray-500"></p>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    const Footer = () => (
+      <footer className="border-t border-gray-200 mt-12">
+        <div className="max-w-6xl mx-auto px-4 py-10 text-sm text-gray-600">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <p>© {new Date().getFullYear()} FlockByNadeem. All rights reserved.</p>
+            <p className="opacity-70"></p>
+          </div>
+        </div>
+      </footer>
+    );
+
+    const App = () => {
+      const [page, setPage] = React.useState("home");
+      const [user, setUser] = React.useState(null);
+      const [basket, setBasket] = React.useState([]);
+      const [dark, setDark] = React.useState(false);
+
+      React.useEffect(()=>{
+        const sess = load("fb_session");
+        const users = load("fb_users", {});
+        if (sess?.email && users[sess.email]) setUser(users[sess.email]);
+      }, []);
+
+      React.useEffect(()=>{
+        document.body.className = (dark?"bg-gray-950 text-gray-100":"bg-gray-50 text-gray-900")+" transition-colors duration-300";
+      }, [dark]);
+
+      const onAdd = (item) => setBasket([...basket, item]);
+      const onLogout = () => { localStorage.removeItem("fb_session"); setUser(null); };
+
+      return (
+        <div>
+          <Nav page={page} setPage={setPage} authed={!!user} onLogout={onLogout} dark={dark} setDark={setDark}/>
+          {page==="home" && <Hero setPage={setPage} dark={dark}/>}
+          {page==="menu" && <Menu dark={dark} onAdd={onAdd}/>}
+          {page==="reserve" && <Reservations user={user} basket={basket} setBasket={setBasket}/>}
+          {page==="contact" && <Contact/>}
+          {page==="account" && !user && <Account onLogin={(u)=>{ setUser(u); setPage("reserve"); }}/>}
+          <Footer/>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App/>);
+  </script>
+</body>
+</html>
